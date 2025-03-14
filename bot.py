@@ -54,12 +54,12 @@ def start(message):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
         markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
-        bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="MarkdownV2")
+        bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
     
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🔥 Get Free Likes Now! 👍", callback_data="increase_likes"))
-    bot.send_message(chat_id, MESSAGES["welcome"], reply_markup=markup, parse_mode="MarkdownV2")
+    bot.send_message(chat_id, MESSAGES["welcome"], reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
@@ -67,15 +67,14 @@ def ask_username(call):
     if is_spamming(chat_id):
         ban_user(chat_id)
         return
-    bot.send_message(chat_id, "✏️ **Send your Instagram username (without @).**", parse_mode="MarkdownV2")
+    bot.send_message(chat_id, "✏️ **Send your Instagram username (without @).**", parse_mode="Markdown")
     user_data[chat_id] = {}
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
-    username = message.text.strip().replace("_", "\\_")  # Escape underscores
-    user_data[chat_id]["username"] = username
-    bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="MarkdownV2")
+    user_data[chat_id]["username"] = message.text.strip()
+    bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
@@ -83,7 +82,7 @@ def save_post_link(message):
     user_data[chat_id]["post"] = message.text.strip()
     bot.send_chat_action(chat_id, "typing")
     time.sleep(3)
-    bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="MarkdownV2")
+    bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="Markdown")
     boost_instagram(chat_id)
 
 def boost_instagram(chat_id):
@@ -101,10 +100,10 @@ def boost_instagram(chat_id):
         elif "already used" in api_response.get("message", ""):
             response = "❌ **You have reached the free boost limit. Try later.**"
         else:
-            response = f"❌ {api_response.get('message', 'Unknown error')}"
+            response = f" {api_response.get('message', 'Unknown error')}"
     except Exception as e:
         response = f"❌ **Request failed:** {str(e)}"
-    bot.send_message(chat_id, response, parse_mode="MarkdownV2")
+    bot.send_message(chat_id, response, parse_mode="Markdown")
     user_data.pop(chat_id, None)
 
 bot.polling()
