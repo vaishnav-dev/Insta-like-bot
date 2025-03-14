@@ -77,6 +77,16 @@ def start(message):
 
     show_language_selection(chat_id)
 
+# Check if user joined after clicking "I've Joined"
+@bot.callback_query_handler(func=lambda call: call.data == "check_joined")
+def check_if_joined(call):
+    chat_id = call.message.chat.id
+    if check_membership(chat_id):
+        bot.send_message(chat_id, "✅ **You have joined!**\n\nNow you can access the bot.", parse_mode="Markdown")
+        show_language_selection(chat_id)
+    else:
+        bot.send_message(chat_id, "❌ **You're not in the channel!**\n\nPlease join first and then click 'I've Joined'.", parse_mode="Markdown")
+
 # Language selection handler
 def show_language_selection(chat_id):
     markup = InlineKeyboardMarkup()
@@ -90,6 +100,8 @@ def set_language(call):
     lang = call.data.split("_")[1]
     user_lang[chat_id] = lang
 
+    bot.send_message(chat_id, f"✅ **Language set to {LANGUAGES[lang]}**", parse_mode="Markdown")
+
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Increase Post Likes 👍", callback_data="increase_likes"))
 
@@ -100,7 +112,7 @@ def ask_username(call):
     chat_id = call.message.chat.id
     lang = user_lang.get(chat_id, "en")
 
-    user_data[chat_id] = {}  # ✅ Ensure user_data is initialized
+    user_data[chat_id] = {}
 
     bot.send_message(chat_id, "📝 **Step 1/2**\n\nSend your Instagram username (example: `insta_user123`):", parse_mode="Markdown")
 
@@ -132,16 +144,14 @@ def boost_instagram(chat_id, msg_id):
     res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
     api_response = res.json()
 
-    if 'Success!' in api_response:
-        lang = user_lang.get(chat_id, "en")
-        success_msg = MESSAGES["success"][lang].format(CHANNEL_URL=CHANNEL_URL)
-        
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("🔁 Boost Another Post", callback_data="increase_likes"))
+    lang = user_lang.get(chat_id, "en")
 
-        bot.send_message(chat_id, success_msg, reply_markup=markup, parse_mode="Markdown")
+    if 'Success!' in api_response:
+        success_msg = MESSAGES["success"][lang].format(CHANNEL_URL=CHANNEL_URL)
+        bot.send_message(chat_id, success_msg, parse_mode="Markdown")
     else:
-        bot.send_message(chat_id, "⚠️ **Boost Failed!**\n\nTry again later or contact @yshzap", parse_mode="Markdown")
+        failure_reason = api_response.get("error", "Unknown error occurred.")
+        bot.send_message(chat_id, f"⚠️ **Boost Failed!**\n\n❌ Reason: {failure_reason}", parse_mode="Markdown")
 
     user_data.pop(chat_id, None)
 
