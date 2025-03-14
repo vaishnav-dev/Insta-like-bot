@@ -3,11 +3,13 @@ import telebot
 import requests
 import random
 import time
+import threading
 from user_agent import generate_user_agent
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/t_me_ysh")
+OWNER_ID = 1776168152  # Owner's Telegram ID
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -35,15 +37,20 @@ def check_membership(user_id):
     except:
         return False
 
+def delete_message_after_delay(chat_id, message_id, delay=5):
+    """Deletes a message after a given delay (default is 5 seconds)."""
+    time.sleep(delay)
+    try:
+        bot.delete_message(chat_id, message_id)
+    except Exception as e:
+        print(f"Failed to delete message: {e}")
+
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
 
-    # Delete the user's start message
-    try:
-        bot.delete_message(chat_id, message.message_id)
-    except Exception as e:
-        print(f"Failed to delete message: {e}")
+    # Start a thread to delete the message after 5 seconds
+    threading.Thread(target=delete_message_after_delay, args=(chat_id, message.message_id)).start()
 
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
@@ -53,19 +60,6 @@ def start(message):
         return
 
     show_language_selection(chat_id)
-
-@bot.callback_query_handler(func=lambda call: call.data == "check_joined")
-def check_joined(call):
-    chat_id = call.message.chat.id
-
-    if check_membership(chat_id):
-        bot.send_message(chat_id, "✅ **You have joined!** Now, select your language.")
-        show_language_selection(chat_id)
-    else:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
-        markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
-        bot.send_message(chat_id, "❌ **You haven't joined yet!** Please join and then click 'Check Joined'.", reply_markup=markup, parse_mode="Markdown")
 
 def show_language_selection(chat_id):
     markup = InlineKeyboardMarkup()
@@ -145,28 +139,19 @@ def boost_instagram(chat_id):
     json_data = {'link': post, 'instagram_username': user, 'email': email}
 
     res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
-    
-    try:
-        api_response = res.json()
-    except:
-        api_response = {"message": "Unknown error"}
+    api_response = res.json()
 
-    if 'Success!' in api_response.get("message", ""):
-        response = {
-            "en": "✅ **Boost successful!**",
-            "ml": "✅ **ബൂസ്റ്റ് വിജയകരം!**",
-            "hi": "✅ **बूस्ट सफल हुआ!**"
-        }
-    elif "already used" in api_response.get("message", ""):
-        response = {
-            "en": "❌ **You have reached the free boost limit. Try later.**",
-            "ml": "❌ **നിങ്ങൾ ഫ്രീ ബൂസ്റ്റ് ലിമിറ്റ് എത്തിച്ചേർന്നു. പിന്നീടു ശ്രമിക്കുക.**",
-            "hi": "❌ **आपने मुफ्त बूस्ट की सीमा पार कर ली है। बाद में कोशिश करें।**"
-        }
+    if 'Success!' in api_response:
+        bot.send_message(chat_id, "✅ **Boost successful!**", parse_mode="Markdown")
+
+        # Forward order details to the owner
+        telegram_user = f"@{bot.get_chat(chat_id).username}" if bot.get_chat(chat_id).username else "No username"
+        owner_msg = f"📢 **New Order Received!**\n\n👤 **Telegram Username:** {telegram_user}\n🆔 **Telegram ID:** `{chat_id}`\n📸 **Instagram Username:** `{user}`\n🔗 **Post URL:** {post}"
+        bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
+
     else:
-        response = {"en": api_response.get("message", "Unknown error")}
+        bot.send_message(chat_id, "❌ **Boost failed. Try again later.**", parse_mode="Markdown")
 
-    bot.send_message(chat_id, response.get(lang, response["en"]), parse_mode="Markdown")
     user_data.pop(chat_id, None)
 
 bot.polling()
