@@ -100,7 +100,7 @@ def boost_instagram(chat_id):
         elif "already used" in api_response.get("message", ""):
             response = "❌ **You have reached the free boost limit. Try later.**"
         else:
-            response = f"❌ **Error:** {api_response.get('message', 'Unknown error')}"
+            response = f" {api_response.get('message', 'Unknown error')}"
     except Exception as e:
         response = f"❌ **Request failed:** {str(e)}"
     bot.send_message(chat_id, response, parse_mode="Markdown")
