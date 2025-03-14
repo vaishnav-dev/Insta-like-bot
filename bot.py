@@ -18,6 +18,7 @@ bot = telebot.TeleBot(TOKEN)
 # User data storage
 user_lang = {}
 user_data = {}
+new_users = set()  # Track new users who use /start
 
 # Language options
 LANGUAGES = {
@@ -52,6 +53,17 @@ def check_membership(user_id):
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
+    username = message.from_user.username if message.from_user.username else "No username"
+
+    # Forward new user info to owner
+    if chat_id not in new_users:
+        new_users.add(chat_id)  # Add user to tracked set
+        owner_msg = (
+            f"🆕 **New User Started the Bot!**\n\n"
+            f"👤 Username: @{username}\n"
+            f"🆔 ID: `{chat_id}`"
+        )
+        bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
 
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
@@ -149,17 +161,6 @@ def boost_instagram(chat_id):
         markup.add(InlineKeyboardButton("🌟 Rate Us", url=CHANNEL_URL))
         
         bot.send_message(chat_id, success_msg, reply_markup=markup, parse_mode="Markdown")
-        
-        # Notify owner
-        telegram_user = f"@{bot.get_chat(chat_id).username}" if bot.get_chat(chat_id).username else "No username"
-        owner_msg = (
-            f"📢 **New Order Received!**\n\n"
-            f"👤 **Telegram Username:** {telegram_user}\n"
-            f"🆔 **Telegram ID:** `{chat_id}`\n"
-            f"📸 **Instagram Username:** `{user}`\n"
-            f"🔗 **Post URL:** {post}"
-        )
-        bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
     else:
         bot.send_message(chat_id, 
             "❌ **Oops!**\n\nWe couldn't process your request. Please:\n1️⃣ Ensure your account is public\n2️⃣ Try again after 1 hour\n3️⃣ Contact @yshzap if issues persist",
