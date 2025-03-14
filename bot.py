@@ -154,9 +154,14 @@ def boost_instagram(chat_id):
             "hi": "❌ **आपने मुफ्त बूस्ट की सीमा पार कर ली है। बाद में कोशिश करें।**"
         }
     else:
-        response = api_response.get("message", "Unknown error")
+        # Ensure response is always a dictionary
+        response = {
+            "en": f"⚠️ **Error:** {api_response.get('message', 'Unknown error')}",
+            "ml": f"⚠️ **തെറ്റ്:** {api_response.get('message', 'അജ്ഞാത പിശക്')}",
+            "hi": f"⚠️ **त्रुटि:** {api_response.get('message', 'अज्ञात त्रुटि')}"
+        }
 
-    bot.send_message(chat_id, response[lang], parse_mode="Markdown")
+    bot.send_message(chat_id, response.get(lang, response["en"]), parse_mode="Markdown")
     user_data.pop(chat_id, None)
 
 bot.polling()
