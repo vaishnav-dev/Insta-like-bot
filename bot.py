@@ -103,29 +103,17 @@ def ask_username(call):
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
-
-    username = message.text.strip()
-    user_data[chat_id]["username"] = username
+    user_data[chat_id]["username"] = message.text.strip()
 
     lang = user_lang.get(chat_id, "en")
-
-    msg = {
-        "en": "📸 **Now send your Instagram post link.**",
-        "ml": "📸 **ഇപ്പോൾ നിങ്ങളുടെ Instagram പോസ്റ്റ് ലിങ്ക് അയയ്ക്കുക.**",
-        "hi": "📸 **अब अपना इंस्टाग्राम पोस्ट लिंक भेजें।**"
-    }
-
-    bot.send_message(chat_id, msg[lang], parse_mode="Markdown")
+    bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
     chat_id = message.chat.id
-
-    post_link = message.text.strip()
-    user_data[chat_id]["post"] = post_link
+    user_data[chat_id]["post"] = message.text.strip()
 
     bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="Markdown")
-
     boost_instagram(chat_id)
 
 def boost_instagram(chat_id):
@@ -144,13 +132,12 @@ def boost_instagram(chat_id):
     if 'Success!' in api_response:
         bot.send_message(chat_id, "✅ **Boost successful!**", parse_mode="Markdown")
 
-        # Forward order details to the owner
         telegram_user = f"@{bot.get_chat(chat_id).username}" if bot.get_chat(chat_id).username else "No username"
         owner_msg = f"📢 **New Order Received!**\n\n👤 **Telegram Username:** {telegram_user}\n🆔 **Telegram ID:** `{chat_id}`\n📸 **Instagram Username:** `{user}`\n🔗 **Post URL:** {post}"
         bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
-
     else:
-        bot.send_message(chat_id, "❌ **Boost failed. Try again later.**", parse_mode="Markdown")
+        error_message = api_response.get("message", "Unknown error occurred.")
+        bot.send_message(chat_id, f"❌ **Boost failed!**\n\n⚠️ **Reason:** {error_message}", parse_mode="Markdown")
 
     user_data.pop(chat_id, None)
 
