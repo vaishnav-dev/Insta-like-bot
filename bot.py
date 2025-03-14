@@ -47,13 +47,32 @@ def start(message):
             InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
             InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
         )
+        markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
         bot.send_message(chat_id, "🚨 **Join our group and channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
 
+    show_language_selection(chat_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "check_joined")
+def check_joined(call):
+    chat_id = call.message.chat.id
+
+    if check_membership(chat_id):
+        bot.send_message(chat_id, "✅ **You have joined!** Now, select your language.")
+        show_language_selection(chat_id)
+    else:
+        markup = InlineKeyboardMarkup()
+        markup.add(
+            InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
+            InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
+        )
+        markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
+        bot.send_message(chat_id, "❌ **You haven't joined yet!** Please join and then click 'Check Joined'.", reply_markup=markup, parse_mode="Markdown")
+
+def show_language_selection(chat_id):
     markup = InlineKeyboardMarkup()
     for lang_code, lang_name in LANGUAGES.items():
         markup.add(InlineKeyboardButton(lang_name, callback_data=f"lang_{lang_code}"))
-    
     bot.send_message(chat_id, "Choose language / ഭാഷ തിരഞ്ഞെടുക്കുക / भाषा चुनें:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("lang_"))
@@ -77,6 +96,7 @@ def ask_username(call):
             InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
             InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
         )
+        markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
         bot.send_message(chat_id, "🚨 **Join our group and channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
 
