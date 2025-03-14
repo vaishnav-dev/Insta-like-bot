@@ -61,28 +61,18 @@ def start(message):
     chat_id = message.chat.id
     username = message.from_user.username if message.from_user.username else "No username"
 
-    # Log the /start command
     logger.info(f"New /start command from user: @{username} (ID: {chat_id})")
 
-    # Forward new user info to owner
     if chat_id not in new_users:
-        new_users.add(chat_id)  # Add user to tracked set
-        owner_msg = (
-            f"🆕 **New User Started the Bot!**\n\n"
-            f"👤 Username: @{username}\n"
-            f"🆔 ID: `{chat_id}`"
-        )
+        new_users.add(chat_id)
+        owner_msg = f"🆕 **New User Started the Bot!**\n\n👤 Username: @{username}\n🆔 ID: `{chat_id}`"
         bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
 
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("✨ Join Channel (Required)", url=CHANNEL_URL))
         markup.add(InlineKeyboardButton("✅ I've Joined", callback_data="check_joined"))
-        bot.send_message(chat_id, 
-            "🔒 **Access Required**\n\nJoin our channel to unlock FREE Instagram likes! 👇", 
-            reply_markup=markup, 
-            parse_mode="Markdown"
-        )
+        bot.send_message(chat_id, "🔒 **Access Required**\n\nJoin our channel to unlock FREE Instagram likes! 👇", reply_markup=markup, parse_mode="Markdown")
         return
 
     show_language_selection(chat_id)
@@ -94,7 +84,6 @@ def show_language_selection(chat_id):
         markup.add(InlineKeyboardButton(lang_name, callback_data=f"lang_{lang_code}"))
     bot.send_message(chat_id, "Choose language / ഭാഷ തിരഞ്ഞെടുക്കുക / भाषा चुनें:", reply_markup=markup)
 
-# Set language callback handler
 @bot.callback_query_handler(func=lambda call: call.data.startswith("lang_"))
 def set_language(call):
     chat_id = call.message.chat.id
@@ -103,56 +92,35 @@ def set_language(call):
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Increase Post Likes 👍", callback_data="increase_likes"))
-    
+
     bot.send_message(chat_id, MESSAGES["welcome"][lang], reply_markup=markup, parse_mode="Markdown")
 
-# Increase likes callback handler
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
     chat_id = call.message.chat.id
     lang = user_lang.get(chat_id, "en")
-    
-    bot.send_message(chat_id, 
-        "📝 **Step 1/2**\n\nSend your Instagram username (example: `insta_user123`):", 
-        parse_mode="Markdown"
-    )
 
-# Save username handler
+    user_data[chat_id] = {}  # ✅ Ensure user_data is initialized
+
+    bot.send_message(chat_id, "📝 **Step 1/2**\n\nSend your Instagram username (example: `insta_user123`):", parse_mode="Markdown")
+
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
     user_data[chat_id]["username"] = message.text.strip()
-    
-    bot.send_message(chat_id, 
-        "🔗 **Step 2/2**\n\nSend your Instagram post link (example: `https://www.instagram.com/p/ABC123/`)", 
-        parse_mode="Markdown"
-    )
 
-# Save post link handler
+    bot.send_message(chat_id, "🔗 **Step 2/2**\n\nSend your Instagram post link (example: `https://www.instagram.com/p/ABC123/`)", parse_mode="Markdown")
+
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
     chat_id = message.chat.id
     user_data[chat_id]["post"] = message.text.strip()
-    
-    msg = bot.send_message(chat_id, 
-        "⏳ **Processing Request...**\n\nWe're generating your likes! Please wait 15 seconds ⏱️", 
-        parse_mode="Markdown"
-    )
-    
-    # Log the post link submission
-    logger.info(f"User {chat_id} submitted post link: {user_data[chat_id]['post']}")
 
-    # Edit message after delay for better UX
-    threading.Thread(target=update_processing_message, args=(chat_id, msg.message_id)).start()
-    boost_instagram(chat_id)
+    msg = bot.send_message(chat_id, "⏳ **Processing Request...**\n\nWe're generating your likes! Please wait ⏱️", parse_mode="Markdown")
 
-# Update processing message
-def update_processing_message(chat_id, msg_id):
-    time.sleep(8)
-    bot.edit_message_text("✅ **Finalizing Boost...**\nAlmost there!", chat_id, msg_id, parse_mode="Markdown")
+    threading.Thread(target=boost_instagram, args=(chat_id, msg.message_id)).start()
 
-# Boost Instagram function
-def boost_instagram(chat_id):
+def boost_instagram(chat_id, msg_id):
     user = user_data[chat_id]["username"]
     post = user_data[chat_id]["post"]
     ua = generate_user_agent()
@@ -170,18 +138,11 @@ def boost_instagram(chat_id):
         
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🔁 Boost Another Post", callback_data="increase_likes"))
-        markup.add(InlineKeyboardButton("🌟 Rate Us", url=CHANNEL_URL))
-        
+
         bot.send_message(chat_id, success_msg, reply_markup=markup, parse_mode="Markdown")
-        logger.info(f"Successfully boosted post for user {chat_id}: {post}")
     else:
-        bot.send_message(chat_id, 
-            " **Oops!**\n\nWe couldn't process your request. Please:\n1️⃣ Ensure your account is public\n2️⃣ Try again after 1 hour\n3️⃣ Contact @yshzap if issues persist",
-            parse_mode="Markdown"
-        )
-        logger.error(f"Failed to boost post for user {chat_id}: {api_response}")
+        bot.send_message(chat_id, "⚠️ **Boost Failed!**\n\nTry again later or contact @yshzap", parse_mode="Markdown")
 
     user_data.pop(chat_id, None)
 
-# Start polling
 bot.polling()
