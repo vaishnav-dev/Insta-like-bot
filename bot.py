@@ -1,11 +1,12 @@
 import telebot
 import requests
 import random
-from user_agent import generate_user_agent
 import os
+import time
+from user_agent import generate_user_agent
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "7700704949:AAF8-KX3VNRFHbeKXeCxyCbry6s39qWH4hs"
+TOKEN = os.getenv("BOT_TOKEN")  # Use environment variable for security
 bot = telebot.TeleBot(TOKEN)
 
 # Dictionary to store user language preferences
@@ -41,7 +42,10 @@ def boost_instagram(message):
     try:
         user, post = message.text.split('|')
         ua = str(generate_user_agent())
-        re = random.randint(100, 999)
+        random_id = random.randint(100, 999)
+
+        # Generate a unique email to avoid blocks
+        email = f"{int(time.time())}@gmail.com"
 
         headers = {
             'authority': 'api.likesjet.com',
@@ -55,15 +59,18 @@ def boost_instagram(message):
         json_data = {
             'link': post.strip(),
             'instagram_username': user.strip(),
-            'email': f'{re}@gmail.com',
+            'email': email,
         }
 
         res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
+        api_response = res.json()  # Get full API response
 
-        if 'Success!' in res.json():
+        print("API Response:", api_response)  # Print API response for debugging
+
+        if 'Success!' in api_response:
             response = "✅ Boost successful!" if lang == "en" else "✅ റോഷ് വിജയകരമായി!"
         else:
-            response = "❌ You have already used this service. Try again after 24 hours." if lang == "en" else "❌ നിങ്ങൾ ഇതിനകം ഈ സേവനം ഉപയോഗിച്ചിട്ടുണ്ട്. 24 മണിക്കൂർ കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക."
+            response = f"❌ API Error: {api_response}"  # Show full error message
 
         bot.reply_to(message, response)
 
