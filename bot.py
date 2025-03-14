@@ -33,35 +33,28 @@ def start(message):
         bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
     bot.send_message(chat_id, MESSAGES["welcome"], parse_mode="Markdown")
-    ask_recaptcha(chat_id)
-
-def ask_recaptcha(chat_id):
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("✔️ I'm not a robot", callback_data="recaptcha_verified"))
-    bot.send_message(chat_id, "🔒 **Please verify you are not a bot.**", reply_markup=markup, parse_mode="Markdown")
-
-@bot.callback_query_handler(func=lambda call: call.data == "recaptcha_verified")
-def recaptcha_verified(call):
-    chat_id = call.message.chat.id
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Increase Post Likes 👍", callback_data="increase_likes"))
-    bot.send_message(chat_id, "✅ **Verification successful! Now, proceed to boost your likes.**", reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
     chat_id = call.message.chat.id
+    bot.send_chat_action(chat_id, 'typing')
+    time.sleep(3)
     bot.send_message(chat_id, "✏️ **Send your Instagram username (without @).**", parse_mode="Markdown")
     user_data[chat_id] = {}
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
+    bot.send_chat_action(chat_id, 'typing')
+    time.sleep(3)
     user_data[chat_id]["username"] = message.text.strip()
     bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
     chat_id = message.chat.id
+    bot.send_chat_action(chat_id, 'typing')
+    time.sleep(3)
     user_data[chat_id]["post"] = message.text.strip()
     bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="Markdown")
     boost_instagram(chat_id)
@@ -88,4 +81,3 @@ def boost_instagram(chat_id):
     user_data.pop(chat_id, None)
 
 bot.polling()
-
