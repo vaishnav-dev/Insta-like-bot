@@ -137,7 +137,7 @@ def boost_instagram(chat_id):
             "❌ **നിങ്ങൾ പരമാവധി ഉപയോഗിച്ചു. പിന്നീട് ശ്രമിക്കുക.**"
         )
     else:
-        response = f" **Log:** {api_response.get('message', 'Unknown error')}"
+        response = f"{api_response.get('message', 'Unknown error')}"
 
     bot.send_message(chat_id, response, parse_mode="Markdown")
     user_data.pop(chat_id, None)  # Clear user data
