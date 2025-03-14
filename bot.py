@@ -30,6 +30,11 @@ MESSAGES = {
     }
 }
 
+def escape_markdown(text):
+    """Escapes special Markdown characters to prevent formatting issues."""
+    special_chars = "_*[]()~`>#+-=|{}.!"
+    return "".join("\\" + char if char in special_chars else char for char in text)
+
 def check_membership(user_id):
     try:
         channel_status = bot.get_chat_member("@t_me_ysh", user_id).status
@@ -38,18 +43,16 @@ def check_membership(user_id):
         return False
 
 def delete_message_after_delay(chat_id, message_id, delay=5):
-    """Deletes a message after a given delay (default is 5 seconds)."""
     time.sleep(delay)
     try:
         bot.delete_message(chat_id, message_id)
-    except Exception as e:
-        print(f"Failed to delete message: {e}")
+    except:
+        pass
 
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
 
-    # Start a thread to delete the message after 5 seconds
     threading.Thread(target=delete_message_after_delay, args=(chat_id, message.message_id)).start()
 
     if not check_membership(chat_id):
@@ -105,7 +108,6 @@ def save_username(message):
     chat_id = message.chat.id
     user_data[chat_id]["username"] = message.text.strip()
 
-    lang = user_lang.get(chat_id, "en")
     bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
@@ -117,7 +119,6 @@ def save_post_link(message):
     boost_instagram(chat_id)
 
 def boost_instagram(chat_id):
-    lang = user_lang.get(chat_id, "en")
     user = user_data[chat_id]["username"]
     post = user_data[chat_id]["post"]
     ua = generate_user_agent()
@@ -133,11 +134,17 @@ def boost_instagram(chat_id):
         bot.send_message(chat_id, "✅ **Boost successful!**", parse_mode="Markdown")
 
         telegram_user = f"@{bot.get_chat(chat_id).username}" if bot.get_chat(chat_id).username else "No username"
-        owner_msg = f"📢 **New Order Received!**\n\n👤 **Telegram Username:** {telegram_user}\n🆔 **Telegram ID:** `{chat_id}`\n📸 **Instagram Username:** `{user}`\n🔗 **Post URL:** {post}"
-        bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
+        owner_msg = (
+            f"📢 **New Order Received!**\n\n"
+            f"👤 **Telegram Username:** {escape_markdown(telegram_user)}\n"
+            f"🆔 **Telegram ID:** `{chat_id}`\n"
+            f"📸 **Instagram Username:** `{escape_markdown(user)}`\n"
+            f"🔗 **Post URL:** {escape_markdown(post)}"
+        )
+        bot.send_message(OWNER_ID, owner_msg, parse_mode="MarkdownV2")
     else:
         error_message = api_response.get("message", "Unknown error occurred.")
-        bot.send_message(chat_id, f"**{error_message}** \n\n If you facing any issue contact @yshzap", parse_mode="Markdown")
+        bot.send_message(chat_id, f"❌ **{escape_markdown(error_message)}**", parse_mode="MarkdownV2")
 
     user_data.pop(chat_id, None)
 
