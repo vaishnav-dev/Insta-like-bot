@@ -137,7 +137,7 @@ def boost_instagram(chat_id):
         bot.send_message(OWNER_ID, owner_msg, parse_mode="Markdown")
     else:
         error_message = api_response.get("message", "Unknown error occurred.")
-        bot.send_message(chat_id, f"❌ **Boost failed!**\n\n⚠️ **Reason:** {error_message}", parse_mode="Markdown")
+        bot.send_message(chat_id, f"💝 **Thanks for using our bot**\n\n **{error_message}** \n\n If you facing any issue contact @yshzap", parse_mode="Markdown")
 
     user_data.pop(chat_id, None)
 
