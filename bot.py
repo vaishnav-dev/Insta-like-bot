@@ -5,7 +5,7 @@ from user_agent import generate_user_agent
 import os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "7700704949:AAF8-KX3VNRFHbeKXeCxyCbry6s39qWH4hs"
 bot = telebot.TeleBot(TOKEN)
 
 # Dictionary to store user language preferences
