@@ -4,8 +4,13 @@ import requests
 import random
 import time
 import threading
+import logging
 from user_agent import generate_user_agent
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 # Environment variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -46,7 +51,8 @@ def check_membership(user_id):
     try:
         channel_status = bot.get_chat_member("@t_me_ysh", user_id).status
         return channel_status in ["member", "administrator", "creator"]
-    except:
+    except Exception as e:
+        logger.error(f"Error checking membership: {e}")
         return False
 
 # Start command handler
@@ -54,6 +60,9 @@ def check_membership(user_id):
 def start(message):
     chat_id = message.chat.id
     username = message.from_user.username if message.from_user.username else "No username"
+
+    # Log the /start command
+    logger.info(f"New /start command from user: @{username} (ID: {chat_id})")
 
     # Forward new user info to owner
     if chat_id not in new_users:
@@ -130,6 +139,9 @@ def save_post_link(message):
         parse_mode="Markdown"
     )
     
+    # Log the post link submission
+    logger.info(f"User {chat_id} submitted post link: {user_data[chat_id]['post']}")
+
     # Edit message after delay for better UX
     threading.Thread(target=update_processing_message, args=(chat_id, msg.message_id)).start()
     boost_instagram(chat_id)
@@ -161,11 +173,13 @@ def boost_instagram(chat_id):
         markup.add(InlineKeyboardButton("🌟 Rate Us", url=CHANNEL_URL))
         
         bot.send_message(chat_id, success_msg, reply_markup=markup, parse_mode="Markdown")
+        logger.info(f"Successfully boosted post for user {chat_id}: {post}")
     else:
         bot.send_message(chat_id, 
-            "❌ **Oops!**\n\nWe couldn't process your request. Please:\n1️⃣ Ensure your account is public\n2️⃣ Try again after 1 hour\n3️⃣ Contact @yshzap if issues persist",
+            " **Oops!**\n\nWe couldn't process your request. Please:\n1️⃣ Ensure your account is public\n2️⃣ Try again after 1 hour\n3️⃣ Contact @yshzap if issues persist",
             parse_mode="Markdown"
         )
+        logger.error(f"Failed to boost post for user {chat_id}: {api_response}")
 
     user_data.pop(chat_id, None)
 
