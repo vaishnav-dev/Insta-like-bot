@@ -6,39 +6,32 @@ import time
 from user_agent import generate_user_agent
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "YOUR_BOT_TOKEN"
-GROUP_ID = -1001234567890  # Replace with actual Group ID (from @userinfobot)
-CHANNEL_USERNAME = "@t_me_ysh"  # Use channel username (for private channels)
-GROUP_URL = "https://t.me/+am12cx2hyWQ4NWVl"
-CHANNEL_URL = "https://t.me/t_me_ysh"
+TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/t_me_ysh")
 
 bot = telebot.TeleBot(TOKEN)
 
-user_lang = {}  # Stores user's selected language
-user_data = {}  # Temporary storage for username & post link
+user_lang = {}
+user_data = {}
 
 LANGUAGES = {
     "en": "English 🇬🇧",
     "ml": "Malayalam 🇮🇳",
-    "hi": "Hindi 🇮🇳",
-    "ta": "Tamil 🇮🇳",
-    "te": "Telugu 🇮🇳",
-    "kn": "Kannada 🇮🇳"
+    "hi": "Hindi 🇮🇳"
 }
 
 MESSAGES = {
     "welcome": {
-        "en": "🎉 Welcome to **Instagram Like Booster Bot!**\n\n✅ **Increase likes on your Instagram post for free!**",
-        "ml": "🎉 **ഇൻസ്റ്റാഗ്രാം ലൈക്ക് ബൂസ്റ്റർ ബോട്ടിലേക്ക് സ്വാഗതം!**\n\n✅ **നിങ്ങളുടെ Instagram പോസ്റ്റിൽ ലൈക്കുകൾ വർദ്ധിപ്പിക്കുക!**",
-        "hi": "🎉 **इंस्टाग्राम लाइक बूस्टर बॉट में आपका स्वागत है!**\n\n✅ **अपने इंस्टाग्राम पोस्ट पर लाइक बढ़ाएं!**"
+        "en": "🎉 Welcome to **Instagram Like Booster Bot!**\n\n✅ **Increase likes on your Instagram post for free!**\n👉 **If you need help, contact @yshzap.**",
+        "ml": "🎉 **ഇൻസ്റ്റാഗ്രാം ലൈക്ക് ബൂസ്റ്റർ ബോട്ടിലേക്ക് സ്വാഗതം!**\n\n✅ **നിങ്ങളുടെ Instagram പോസ്റ്റിൽ ലൈക്കുകൾ വർദ്ധിപ്പിക്കുക!**\n👉 **സഹായം ആവശ്യമാണോ? @yshzap എന്നെ സമീപിക്കുക.**",
+        "hi": "🎉 **इंस्टाग्राम लाइक बूस्टर बॉट में आपका स्वागत है!**\n\n✅ **अपने इंस्टाग्राम पोस्ट पर लाइक बढ़ाएं!**\n👉 **मदद के लिए @yshzap से संपर्क करें।**"
     }
 }
 
 def check_membership(user_id):
     try:
-        channel_status = bot.get_chat_member(CHANNEL_USERNAME, user_id).status
-        group_status = bot.get_chat_member(GROUP_ID, user_id).status
-        return channel_status in ["member", "administrator", "creator"] and group_status in ["member", "administrator", "creator"]
+        channel_status = bot.get_chat_member("@t_me_ysh", user_id).status
+        return channel_status in ["member", "administrator", "creator"]
     except:
         return False
 
@@ -48,34 +41,31 @@ def start(message):
 
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
-        markup.row(
-            InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
-            InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
-        )
+        markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
         markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
-        bot.send_message(chat_id, "🚨 **Join our group and channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
+        bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
 
-    markup = InlineKeyboardMarkup()
-    for lang_code, lang_name in LANGUAGES.items():
-        markup.add(InlineKeyboardButton(lang_name, callback_data=f"lang_{lang_code}"))
-    
-    bot.send_message(chat_id, "Choose language / ഭാഷ തിരഞ്ഞെടുക്കുക:", reply_markup=markup)
+    show_language_selection(chat_id)
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_joined")
 def check_joined(call):
     chat_id = call.message.chat.id
 
     if check_membership(chat_id):
-        bot.send_message(chat_id, "✅ **You have joined!** Now you can use the bot.")
+        bot.send_message(chat_id, "✅ **You have joined!** Now, select your language.")
+        show_language_selection(chat_id)
     else:
         markup = InlineKeyboardMarkup()
-        markup.row(
-            InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
-            InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
-        )
-        markup.add(InlineKeyboardButton("✅ Check Again", callback_data="check_joined"))
-        bot.send_message(chat_id, "❌ **You haven't joined yet!** Please join and then click 'Check Again'.", reply_markup=markup, parse_mode="Markdown")
+        markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
+        markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
+        bot.send_message(chat_id, "❌ **You haven't joined yet!** Please join and then click 'Check Joined'.", reply_markup=markup, parse_mode="Markdown")
+
+def show_language_selection(chat_id):
+    markup = InlineKeyboardMarkup()
+    for lang_code, lang_name in LANGUAGES.items():
+        markup.add(InlineKeyboardButton(lang_name, callback_data=f"lang_{lang_code}"))
+    bot.send_message(chat_id, "Choose language / ഭാഷ തിരഞ്ഞെടുക്കുക / भाषा चुनें:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("lang_"))
 def set_language(call):
@@ -86,7 +76,7 @@ def set_language(call):
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Increase Post Likes 👍", callback_data="increase_likes"))
     
-    bot.send_message(chat_id, MESSAGES["welcome"].get(lang, MESSAGES["welcome"]["en"]), reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(chat_id, MESSAGES["welcome"][lang], reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
@@ -94,32 +84,45 @@ def ask_username(call):
 
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
-        markup.row(
-            InlineKeyboardButton("Join Group 🔗", url=GROUP_URL),
-            InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL)
-        )
+        markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
         markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
-        bot.send_message(chat_id, "🚨 **Join our group and channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
+        bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
 
-    bot.send_message(chat_id, "✏️ **Send your Instagram username** (without `@`).", parse_mode="Markdown")
-    user_data[chat_id] = {}  # Reset user data
+    lang = user_lang.get(chat_id, "en")
+
+    msg = {
+        "en": "✏️ **Send your Instagram username** (without `@`).\n\n⚠️ **Your account must be public!**",
+        "ml": "✏️ **നിങ്ങളുടെ Instagram യൂസർനെയിം അയയ്ക്കുക** (`@` ഇല്ലാതെ).\n\n⚠️ **നിങ്ങളുടെ അക്കൗണ്ട് പബ്ലിക്കായിരിക്കണം!**",
+        "hi": "✏️ **अपना इंस्टाग्राम यूजरनेम भेजें** (`@` के बिना)।\n\n⚠️ **आपका अकाउंट सार्वजनिक होना चाहिए!**"
+    }
+    
+    user_data[chat_id] = {}
+    bot.send_message(chat_id, msg[lang], parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
 
     username = message.text.strip()
-    user_data[chat_id]["username"] = username  # Save username
+    user_data[chat_id]["username"] = username
 
-    bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
+    lang = user_lang.get(chat_id, "en")
+
+    msg = {
+        "en": "📸 **Now send your Instagram post link.**",
+        "ml": "📸 **ഇപ്പോൾ നിങ്ങളുടെ Instagram പോസ്റ്റ് ലിങ്ക് അയയ്ക്കുക.**",
+        "hi": "📸 **अब अपना इंस्टाग्राम पोस्ट लिंक भेजें।**"
+    }
+
+    bot.send_message(chat_id, msg[lang], parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
     chat_id = message.chat.id
 
     post_link = message.text.strip()
-    user_data[chat_id]["post"] = post_link  # Save post link
+    user_data[chat_id]["post"] = post_link
 
     bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="Markdown")
 
@@ -139,13 +142,21 @@ def boost_instagram(chat_id):
     api_response = res.json()
 
     if 'Success!' in api_response:
-        response = "✅ **Boost successful!**"
+        response = {
+            "en": "✅ **Boost successful!**",
+            "ml": "✅ **ബൂസ്റ്റ് വിജയകരം!**",
+            "hi": "✅ **बूस्ट सफल हुआ!**"
+        }
     elif "already used" in api_response.get("message", ""):
-        response = "❌ **You have reached the free boost limit. Try later.**"
+        response = {
+            "en": "❌ **You have reached the free boost limit. Try later.**",
+            "ml": "❌ **നിങ്ങൾ ഫ്രീ ബൂസ്റ്റ് ലിമിറ്റ് എത്തിച്ചേർന്നു. പിന്നീടു ശ്രമിക്കുക.**",
+            "hi": "❌ **आपने मुफ्त बूस्ट की सीमा पार कर ली है। बाद में कोशिश करें।**"
+        }
     else:
-        response = f"{api_response.get('message', 'Unknown error')}"
+        response = api_response.get("message", "Unknown error")
 
-    bot.send_message(chat_id, response, parse_mode="Markdown")
+    bot.send_message(chat_id, response[lang], parse_mode="Markdown")
     user_data.pop(chat_id, None)
 
 bot.polling()
