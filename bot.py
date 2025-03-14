@@ -11,6 +11,8 @@ CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/t_me_ysh")
 
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
+spam_tracker = {}
+BAN_TIME = 60
 
 MESSAGES = {
     "welcome": "🎉 Welcome to **Instagram Like Booster Bot!**\n\n✅ **Increase likes on your Instagram post for free!**\n👉 **If you need help, contact @yshzap.**"
@@ -23,6 +25,28 @@ def check_membership(user_id):
     except:
         return False
 
+def is_spamming(user_id):
+    current_time = time.time()
+    if user_id in spam_tracker:
+        spam_tracker[user_id].append(current_time)
+        spam_tracker[user_id] = [t for t in spam_tracker[user_id] if current_time - t < 5]
+        if len(spam_tracker[user_id]) > 5:
+            return True
+    else:
+        spam_tracker[user_id] = [current_time]
+    return False
+
+def ban_user(chat_id):
+    bot.send_message(chat_id, "🚨 **You are banned for 1 minute due to spamming.**")
+    for i in range(BAN_TIME, 0, -1):
+        time.sleep(1)
+        try:
+            bot.edit_message_text(chat_id=chat_id, message_id=bot.send_message(chat_id, f"⏳ **Ban time left: {i} sec**").message_id, text=f"⏳ **Ban time left: {i} sec**")
+        except:
+            pass
+    del spam_tracker[chat_id]
+    bot.send_message(chat_id, "✅ **Ban lifted, you can use the bot again!**")
+
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
@@ -32,30 +56,32 @@ def start(message):
         markup.add(InlineKeyboardButton("✅ Check Joined", callback_data="check_joined"))
         bot.send_message(chat_id, "🚨 **Join our channel to use this bot!**", reply_markup=markup, parse_mode="Markdown")
         return
-    bot.send_message(chat_id, MESSAGES["welcome"], parse_mode="Markdown")
+    
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🔥 Get Free Likes Now! 👍", callback_data="increase_likes"))
+    bot.send_message(chat_id, MESSAGES["welcome"], reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
     chat_id = call.message.chat.id
-    bot.send_chat_action(chat_id, 'typing')
-    time.sleep(3)
+    if is_spamming(chat_id):
+        ban_user(chat_id)
+        return
     bot.send_message(chat_id, "✏️ **Send your Instagram username (without @).**", parse_mode="Markdown")
     user_data[chat_id] = {}
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "username" not in user_data[message.chat.id])
 def save_username(message):
     chat_id = message.chat.id
-    bot.send_chat_action(chat_id, 'typing')
-    time.sleep(3)
     user_data[chat_id]["username"] = message.text.strip()
     bot.send_message(chat_id, "📸 **Now send your Instagram post link.**", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.chat.id in user_data and "post" not in user_data[message.chat.id])
 def save_post_link(message):
     chat_id = message.chat.id
-    bot.send_chat_action(chat_id, 'typing')
-    time.sleep(3)
     user_data[chat_id]["post"] = message.text.strip()
+    bot.send_chat_action(chat_id, "typing")
+    time.sleep(3)
     bot.send_message(chat_id, "⏳ **Processing... Please wait.**", parse_mode="Markdown")
     boost_instagram(chat_id)
 
