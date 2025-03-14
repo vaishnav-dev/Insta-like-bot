@@ -3,10 +3,8 @@ import telebot
 import requests
 import random
 import time
-from gtts import gTTS
 from user_agent import generate_user_agent
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from io import BytesIO
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/t_me_ysh")
@@ -24,13 +22,6 @@ LANGUAGES = {
     "hi": {"flag": "🇮🇳", "name": "Hindi"}
 }
 
-def generate_tts(text, lang_code):
-    tts = gTTS(text=text, lang=lang_code[:2], slow=False)
-    audio_bytes = BytesIO()
-    tts.write_to_fp(audio_bytes)
-    audio_bytes.seek(0)
-    return audio_bytes
-
 def send_welcome(chat_id, lang_code):
     welcome_text = (
         "🌟 *Welcome to Instagram Like Booster!* 🌟\n\n"
@@ -46,10 +37,6 @@ def send_welcome(chat_id, lang_code):
     bot.send_photo(chat_id, WELCOME_IMAGE_URL, 
                   caption=welcome_text,
                   parse_mode="Markdown")
-    
-    # Send TTS welcome
-    audio = generate_tts(welcome_text.replace('*', ''), lang_code)
-    bot.send_voice(chat_id, audio, title="Welcome to Like Booster")
 
 def check_membership(user_id):
     try:
@@ -185,9 +172,7 @@ def boost_instagram(chat_id):
         # Get message directly from API response
         result_text = api_data.get("message", "Operation completed")
         
-        # Send TTS response
-        audio = generate_tts(result_text, lang)
-        bot.send_voice(chat_id, audio)
+        # Send result message
         bot.send_message(
             chat_id,
             f"📢 *Status Update:*\n\n{result_text}",
