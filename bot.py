@@ -39,6 +39,12 @@ def check_membership(user_id):
 def start(message):
     chat_id = message.chat.id
 
+    # Delete the user's start message
+    try:
+        bot.delete_message(chat_id, message.message_id)
+    except Exception as e:
+        print(f"Failed to delete message: {e}")
+
     if not check_membership(chat_id):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("Join Channel 📢", url=CHANNEL_URL))
@@ -139,9 +145,13 @@ def boost_instagram(chat_id):
     json_data = {'link': post, 'instagram_username': user, 'email': email}
 
     res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
-    api_response = res.json()
+    
+    try:
+        api_response = res.json()
+    except:
+        api_response = {"message": "Unknown error"}
 
-    if 'Success!' in api_response:
+    if 'Success!' in api_response.get("message", ""):
         response = {
             "en": "✅ **Boost successful!**",
             "ml": "✅ **ബൂസ്റ്റ് വിജയകരം!**",
@@ -154,12 +164,7 @@ def boost_instagram(chat_id):
             "hi": "❌ **आपने मुफ्त बूस्ट की सीमा पार कर ली है। बाद में कोशिश करें।**"
         }
     else:
-        # Ensure response is always a dictionary
-        response = {
-            "en": f"⚠️ **Error:** {api_response.get('message', 'Unknown error')}",
-            "ml": f"⚠️ **തെറ്റ്:** {api_response.get('message', 'അജ്ഞാത പിശക്')}",
-            "hi": f"⚠️ **त्रुटि:** {api_response.get('message', 'अज्ञात त्रुटि')}"
-        }
+        response = {"en": api_response.get("message", "Unknown error")}
 
     bot.send_message(chat_id, response.get(lang, response["en"]), parse_mode="Markdown")
     user_data.pop(chat_id, None)
