@@ -9,79 +9,61 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 TOKEN = os.getenv("BOT_TOKEN")  # Use environment variable for security
 bot = telebot.TeleBot(TOKEN)
 
-# Dictionary to store user language preferences
+# Store user language preferences
 user_lang = {}
 
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
     markup = InlineKeyboardMarkup()
-    markup.row_width = 2
     markup.add(
         InlineKeyboardButton("English 🇬🇧", callback_data="lang_en"),
         InlineKeyboardButton("Malayalam 🇮🇳", callback_data="lang_ml")
     )
-    bot.send_message(chat_id, "Please select your language:\nദയവായി നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക:", reply_markup=markup)
+    bot.send_message(chat_id, "Choose language / ഭാഷ തിരഞ്ഞെടുക്കുക:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("lang_"))
 def set_language(call):
     chat_id = call.message.chat.id
     lang = call.data.split("_")[1]
-    user_lang[chat_id] = lang  # Save user language preference
+    user_lang[chat_id] = lang
 
-    if lang == "en":
-        bot.send_message(chat_id, "✅ Language set to English.\n\nSend your Instagram username and post URL in this format:\n\n`username`\n`post_link`", parse_mode="Markdown")
-    else:
-        bot.send_message(chat_id, "✅ ഭാഷ മലയാളം ആയി സെറ്റ് ചെയ്തു.\n\nനിങ്ങളുടെ ഇൻസ്റ്റാഗ്രാം യൂസർനെയിം, പോസ്റ്റ് URL ഈ ഫോർമാറ്റിൽ അയയ്ക്കുക:\n\n`username`\n`post_link`", parse_mode="Markdown")
+    msg = "Send Instagram username and post link in one message, like this:\n\n`username https://instagram.com/p/your_post`" \
+        if lang == "en" else "ഒരു മെസ്സേജിൽ ഇൻസ്റ്റാഗ്രാം യൂസർനെയിമും പോസ്റ്റ് ലിങ്കും അയയ്ക്കുക:\n\n`username https://instagram.com/p/your_post`"
+    
+    bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: "\n" in message.text)
+@bot.message_handler(func=lambda message: " " in message.text)
 def boost_instagram(message):
     chat_id = message.chat.id
-    lang = user_lang.get(chat_id, "en")  # Default to English if no language is set
+    lang = user_lang.get(chat_id, "en")
 
     try:
-        data = message.text.split("\n")
-        if len(data) < 2:
-            bot.reply_to(message, "❌ Invalid format! Please send:\n\n`username`\n`post_link`", parse_mode="Markdown")
+        parts = message.text.split(" ", 1)
+        if len(parts) != 2:
+            bot.reply_to(message, "❌ Invalid format! Send: `username https://instagram.com/p/your_post`", parse_mode="Markdown")
             return
 
-        user, post = data[0].strip(), data[1].strip()
-        ua = str(generate_user_agent())
-
-        # Generate a new random email to avoid blocks
+        user, post = parts[0].strip(), parts[1].strip()
+        ua = generate_user_agent()
         email = f"{random.randint(1000, 9999)}{int(time.time())}@gmail.com"
 
-        headers = {
-            'authority': 'api.likesjet.com',
-            'accept': 'application/json, text/plain, */*',
-            'content-type': 'application/json',
-            'origin': 'https://likesjet.com',
-            'referer': 'https://likesjet.com/',
-            'user-agent': ua
-        }
-
-        json_data = {
-            'link': post,
-            'instagram_username': user,
-            'email': email,
-        }
+        headers = {'user-agent': ua}
+        json_data = {'link': post, 'instagram_username': user, 'email': email}
 
         res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
         api_response = res.json()
 
-        print("API Response:", api_response)  # Debugging
-
         if 'Success!' in api_response:
             response = "✅ Boost successful!" if lang == "en" else "✅ റോഷ് വിജയകരമായി!"
-        elif "You have already used our free boost service many times" in api_response.get("message", ""):
-            response = "❌ You have reached the free boost limit. Try again later." if lang == "en" else "❌ നിങ്ങൾ സൗജന്യ ബൂസ്റ്റ് പരിധി എത്തിച്ചിരിക്കുന്നു. പിന്നീട് വീണ്ടും ശ്രമിക്കുക."
+        elif "already used" in api_response.get("message", ""):
+            response = "❌ You have reached the free boost limit. Try later." if lang == "en" else "❌ നിങ്ങൾ പരമാവധി ഉപയോഗിച്ചു. പിന്നീട് ശ്രമിക്കുക."
         else:
-            response = f"❌ API Error: {api_response}"  # Show full error message
-
+            response = f"❌ API Error: {api_response.get('message', 'Unknown error')}"
+        
         bot.reply_to(message, response)
 
     except Exception as e:
-        error_msg = f"Error: {str(e)}" if lang == "en" else f"പിശക്: {str(e)}"
-        bot.reply_to(message, error_msg)
+        bot.reply_to(message, f"❌ Error: {str(e)}")
 
 bot.polling()
