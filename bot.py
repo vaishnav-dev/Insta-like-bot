@@ -11,8 +11,6 @@ CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/t_me_ysh")
 
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
-spam_tracker = {}
-BAN_TIME = 60
 
 MESSAGES = {
     "welcome": "🎉 Welcome to **Instagram Like Booster Bot!**\n\n✅ **Increase likes on your Instagram post for free!**\n👉 **If you need help, contact @yshzap.**"
@@ -24,28 +22,6 @@ def check_membership(user_id):
         return channel_status in ["member", "administrator", "creator"]
     except:
         return False
-
-def is_spamming(user_id):
-    current_time = time.time()
-    if user_id in spam_tracker:
-        spam_tracker[user_id].append(current_time)
-        spam_tracker[user_id] = [t for t in spam_tracker[user_id] if current_time - t < 5]
-        if len(spam_tracker[user_id]) > 5:
-            return True
-    else:
-        spam_tracker[user_id] = [current_time]
-    return False
-
-def ban_user(chat_id):
-    bot.send_message(chat_id, "🚨 **You are banned for 1 minute due to spamming.**")
-    for i in range(BAN_TIME, 0, -1):
-        time.sleep(1)
-        try:
-            bot.edit_message_text(chat_id=chat_id, message_id=bot.send_message(chat_id, f"⏳ **Ban time left: {i} sec**").message_id, text=f"⏳ **Ban time left: {i} sec**")
-        except:
-            pass
-    del spam_tracker[chat_id]
-    bot.send_message(chat_id, "✅ **Ban lifted, you can use the bot again!**")
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -64,9 +40,6 @@ def start(message):
 @bot.callback_query_handler(func=lambda call: call.data == "increase_likes")
 def ask_username(call):
     chat_id = call.message.chat.id
-    if is_spamming(chat_id):
-        ban_user(chat_id)
-        return
     bot.send_message(chat_id, "✏️ **Send your Instagram username (without @).**", parse_mode="Markdown")
     user_data[chat_id] = {}
 
@@ -89,20 +62,26 @@ def boost_instagram(chat_id):
     user = user_data[chat_id]["username"]
     post = user_data[chat_id]["post"]
     ua = generate_user_agent()
-    email = f"{random.randint(1000, 9999)}{int(time.time())}@gmail.com"
+
+    # Generate a unique email for each user
+    email = f"{user}_{int(time.time())}@gmail.com"
+
     headers = {'user-agent': ua}
     json_data = {'link': post, 'instagram_username': user, 'email': email}
+
     try:
         res = requests.post('https://api.likesjet.com/freeboost/7', headers=headers, json=json_data)
         api_response = res.json()
+
         if 'Success!' in api_response:
             response = "✅ **Boost successful!**"
         elif "already used" in api_response.get("message", ""):
-            response = "❌ **You have reached the free boost limit. Try later.**"
+            response = "You have reached the free boost limit. Try later."
         else:
-            response = f" {api_response.get('message', 'Unknown error')}"
+            response = api_response.get("message", "Unknown error")
     except Exception as e:
-        response = f"❌ **Request failed:** {str(e)}"
+        response = f"Request failed: {str(e)}"
+
     bot.send_message(chat_id, response, parse_mode="Markdown")
     user_data.pop(chat_id, None)
 
